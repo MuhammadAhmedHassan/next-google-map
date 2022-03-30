@@ -47,7 +47,14 @@ function Maps() {
           mapContainerClassName='map-container'
           options={options}
           onLoad={onLoad}
-        ></GoogleMap>
+        >
+          {!!office && (
+            <Marker
+              position={office}
+              icon='https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
+            />
+          )}
+        </GoogleMap>
       </div>
     </div>
   );
