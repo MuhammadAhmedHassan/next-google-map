@@ -29,7 +29,7 @@ a {
 }
 
 .controls input {
-  border: none;
+  /* border: none; */
 }
 
 .map-container {
@@ -45,4 +45,9 @@ a {
 .highlight {
   font-size: 1.25rem;
   font-weight: bold;
+}
+
+.combobox-input {
+  width: 100%;
+  padding: 0.5rem;
 }
