@@ -15,6 +15,7 @@ type MapOptions = google.maps.MapOptions;
 
 function Maps() {
   const [office, setOffice] = useState<LatLngLiteral>();
+  const [directions, setDirections] = useState<DirectionsResult>();
   const mapRef = useRef<GoogleMap | null>(null);
   const center = useMemo<LatLngLiteral>(() => ({ lat: 43, lng: -80 }), []);
   const options = useMemo<MapOptions>(
@@ -27,6 +28,25 @@ function Maps() {
   );
 
   const onLoad = useCallback((map) => (mapRef.current = map), []);
+  const houses = useMemo(() => generateHouses(center), [office]);
+
+  const fetchDirections = (house: LatLngLiteral) => {
+    if (!office) return;
+    const service = new google.maps.DirectionsService();
+    // Route from selected home to office via "DRIVING"
+    service.route(
+      {
+        origin: house,
+        destination: office,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === 'OK' && result) {
+          setDirections(result);
+        }
+      }
+    );
+  };
 
   return (
     <div className='container'>
@@ -39,6 +59,15 @@ function Maps() {
             mapRef.current?.panTo(position);
           }}
         />
+        {!office && <p>Enter the address of your office.</p>}
+        {!!directions && (
+          <Distance
+            leg={
+              directions.routes[0]
+                .legs[0] /* There can be multiple routes to the same destination so we're selecting first route and first leg out of that. */
+            }
+          />
+        )}
       </div>
       <div className='map'>
         <GoogleMap
@@ -48,11 +77,53 @@ function Maps() {
           options={options}
           onLoad={onLoad}
         >
-          {!!office && (
-            <Marker
-              position={office}
-              icon='https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
+          {!!directions && (
+            <DirectionsRenderer
+              directions={directions}
+              options={{
+                polylineOptions: {
+                  zIndex: 5,
+                  strokeColor: '#1976D2',
+                  strokeWeight: 5,
+                },
+              }}
             />
+          )}
+          {!!office && (
+            <>
+              <Marker
+                position={office}
+                icon='https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'
+              />
+
+              {/* Marker Clusters */}
+              <MarkerClusterer>
+                {/* Display houses */}
+                {(cluster) =>
+                  houses.map((house) => (
+                    <Marker
+                      key={`${house.lat}-${house.lng}`}
+                      position={house}
+                      clusterer={cluster}
+                      onClick={() => {
+                        fetchDirections(house);
+                      }}
+                    />
+                  ))
+                }
+              </MarkerClusterer>
+
+              {/* Display circles */}
+              <Circle
+                center={office}
+                radius={
+                  15000 /* radius is in meter, so 15 is 15 meters and 15000 is 15km */
+                }
+                options={closeOptions}
+              />
+              <Circle center={office} radius={30000} options={middleOptions} />
+              <Circle center={office} radius={45000} options={farOptions} />
+            </>
           )}
         </GoogleMap>
       </div>
@@ -77,7 +148,7 @@ const closeOptions = {
   fillColor: '#8BC34A',
 };
 
-const middelOptions = {
+const middleOptions = {
   ...defaultOptions,
   zIndex: 2,
   fillOpacity: 0.05,
@@ -93,6 +164,7 @@ const farOptions = {
   fillColor: '#FF5252',
 };
 
+// It generates houses based on the center -- dummy function
 const generateHouses = (position: LatLngLiteral) => {
   const houses: Array<LatLngLiteral> = [];
   for (let i = 0; i < 100; i++) {
